@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Flashcard Summarizer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            color: #38bdf8;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            text-align: center;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            color: white;
+            margin-bottom: 20px;
+            font-size: 1rem;
+        }
+
+        textarea {
+            height: 150px;
+            resize: vertical;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #0284c7;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #0369a1;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #38bdf8;
+            font-style: italic;
+            margin-top: 10px;
+        }
+
+        /* --- FLASHCARD STYLES --- */
+        #result-area {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .flashcard-container {
+            width: 450px;
+            height: 260px;
+            perspective: 1000px; 
+            cursor: pointer;
+            display: none; /* Hidden until generated */
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border-radius: 16px;
+        }
+
+        .flashcard-container:hover .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            border: 2px solid #334155;
+        }
+
+        .card-front {
+            background-color: #1e293b;
+        }
+
+        .badge {
+            background-color: #0284c7;
+            font-size: 0.75rem;
+            font-weight: bold;
+            padding: 4px 12px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .card-back {
+            background-color: #0f766e;
+            transform: rotateY(180deg);
+            border-color: #115e59;
+        }
+
+        .answer-title {
+            font-size: 0.85rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #2dd4bf;
+            margin-bottom: 12px;
+        }
+
+        p {
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>AI Flashcard Generator</h1>
+        
+        <label for="apiKey">Gemini API Key:</label>
+        <input type="text" id="apiKey" placeholder="AIzaSy...">
+
+        <label for="inputText">Paste Document Content or Notes Here:</label>
+        <textarea id="inputText" placeholder="Paste your study notes or book paragraphs here..."></textarea>
+
+        <button onclick="generateFlashcard()">Generate AI Summary Card</button>
+        <div class="loading" id="loader">AI is thinking and analyzing...</div>
+    </div>
+
+    <div id="result-area">
+        <div class="flashcard-container" id="flashcard">
+            <div class="card-inner">
+                <div class="card-front">
+                    <span class="badge">AI Summary Question</span>
+                    <p id="frontText">Loading question...</p>
+                </div>
+                <div class="card-back">
+                    <span class="answer-title">Core Concept Summary</span>
+                    <p id="backText">Loading summary...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function generateFlashcard() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const textToSummarize = document.getElementById('inputText').value.trim();
+            const loader = document.getElementById('loader');
+            const flashcard = document.getElementById('flashcard');
+
+            if (!apiKey || !textToSummarize) {
+                alert("Please provide both your Gemini API key and some text content!");
+                return;
+            }
+
+            loader.style.display = "block";
+            flashcard.style.display = "none";
+
+            // Prompt engineering to force the AI to return clean JSON data
+            const prompt = `Analyze this text and extract the most important core concept. Format your entire answer strictly as a single JSON object with two properties: "question" (a clear, thought-provoking question about the core concept) and "summary" (a high-yield, concise summary/answer of 2-3 sentences). Do not include markdown blocks or backticks. Text to analyze: ${textToSummarize}`;
+
+            try {
+                // Using the standard Google Gemini API endpoint
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                const data = await response.json();
+                
+                // Clean and parse the JSON string returned by the model
+                let rawText = data.candidates[0].content.parts[0].text.trim();
+                // Strip markdown backticks if AI accidentally included them
+                rawText = rawText.replace(/```json|```/g, ""); 
+                
+                const result = JSON.parse(rawText);
+
+                // Insert the generated text into the HTML elements
+                document.getElementById('frontText').innerText = result.question;
+                document.getElementById('backText').innerText = result.summary;
+
+                // Show the card
+                flashcard.style.display = "block";
+
+            } catch (error) {
+                console.error(error);
+                alert("Failed to parse or generate summary. Make sure your API key is correct and try again.");
+            } finally {
+                loader.style.display = "none";
+            }
+        }
+    </script>
+
+</body>
+</html>
