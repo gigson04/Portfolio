@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sleek Audio Player</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  
+  <style>
+    /* ==========================================
+       1. GLOBAL STYLES & THEME VARIABLES
+       ========================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0a0a0f;
+      --player-bg: #12121a;
+      --border: #1e1e2e;
+      --accent: #7c6ef5;
+      --accent-hover: #6a5ee0;
+      --text: #e2e2f0;
+      --muted: #6b6b8a;
+    }
+
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+    }
+
+    /* ==========================================
+       2. PLAYER LAYOUT (CHASSIS)
+       ========================================== */
+    .player-card {
+      width: 100%;
+      max-width: 360px;
+      background: var(--player-bg);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 2rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Album Art Placeholder */
+    .album-art {
+      width: 100%;
+      aspect-ratio: 1;
+      background: linear-gradient(135deg, var(--accent), #c084fc);
+      border-radius: 16px;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 4rem;
+      box-shadow: 0 8px 24px rgba(124, 110, 245, 0.2);
+    }
+
+    /* Track Information Labels */
+    .track-info {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .track-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.2rem;
+    }
+
+    .track-artist {
+      font-size: 0.95rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* ==========================================
+       3. PROGRESS BAR & TIMELINE SLIDER
+       ========================================== */
+    .timeline-container {
+      margin-bottom: 1.5rem;
+    }
+
+    /* The actual slider input track */
+    .progress-bar {
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--border);
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* Customizing the slider thumb (the moving knob) */
+    .progress-bar::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      transition: transform 0.1s;
+    }
+
+    .progress-bar::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+    }
+
+    /* Time stamp alignment wrapper */
+    .time-stamps {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.5rem;
+      font-family: monospace;
+    }
+
+    /* ==========================================
+       4. CONTROL INTERFACE BUTTONS
+       ========================================== */
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .btn {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 1.2rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      color: var(--accent);
+      transform: scale(1.1);
+    }
+
+    /* Giant Play/Pause Accent Circle */
+    .btn-main {
+      width: 60px;
+      height: 60px;
+      background: var(--accent);
+      color: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.5rem;
+    }
+
+    .btn-main:hover {
+      background: var(--accent-hover);
+      color: #ffffff;
+      box-shadow: 0 4px 15px rgba(124, 110, 245, 0.4);
+    }
+
+    /* ==========================================
+       5. PLAYLIST STYLING
+       ========================================== */
+    .playlist {
+      border-top: 1px solid var(--border);
+      padding-top: 1rem;
+      max-height: 120px;
+      overflow-y: auto;
+    }
+
+    .playlist-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.6rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-bottom: 0.25rem;
+    }
+
+    .playlist-item:hover {
+      background: rgba(30, 30, 46, 0.5);
+    }
+
+    .playlist-item.active {
+      background: rgba(124, 110, 245, 0.15);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .playlist-item .duration {
+      color: var(--muted);
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="player-card">
+    
+    <div class="album-art" id="art-box">🏠</div>
+    
+    <div class="track-info">
+      <div class="track-title" id="track-title">Loading...</div>
+      <div class="track-artist" id="track-artist">Please wait</div>
+    </div>
+
+    <div class="timeline-container">
+      <input type="range" class="progress-bar" id="progress" min="0" max="100" value="0" oninput="seekTrack()"/>
+      <div class="time-stamps">
+        <span id="current-time">0:00</span>
+        <span id="total-duration">0:00</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn" onclick="prevTrack()">⏮</button>
+      <button class="btn btn-main" id="play-btn" onclick="togglePlay()">▶</button>
+      <button class="btn" onclick="nextTrack()">⏭</button>
+    </div>
+
+    <div class="playlist" id="playlist-container">
+      </div>
+
+  </div>
+
+  <script>
+    // 1. DATA MODEL: Your updated track metadata queue
+    const tracksList = [
+      {
+        title: "Home",
+        artist: "Charlie Puth",
+        url: "home.mp3",
+        emoji: "🏠"
+      },
+      {
+        title: "Party For You",
+        artist: "Pop Tracks",
+        url: "party.mp3",
+        emoji: "🎉"
+      },
+    ];
+
+    // 2. STATE MANAGER VARIABLES
+    let currentTrackIndex = 0;
+    let isPlaying = false;
+
+    // 3. CORE AUDIO CORE INSTANCE
+    const audioEngine = new Audio();
+
+    // 4. DOM ELEMENT SELECTION POINTER HOOKS
+    const playButton = document.getElementById("play-btn");
+    const trackTitle = document.getElementById("track-title");
+    const trackArtist = document.getElementById("track-artist");
+    const artBox = document.getElementById("art-box");
+    const progressBar = document.getElementById("progress");
+    const currentTimeText = document.getElementById("current-time");
+    const totalDurationText = document.getElementById("total-duration");
+    const playlistContainer = document.getElementById("playlist-container");
+
+    /**
+     * Initializes the player state layout configs by reading track pointers
+     */
+    function loadTrack(index) {
+      currentTrackIndex = index;
+      const track = tracksList[currentTrackIndex];
+
+      // Points background execution data stream URL directly to file target location 
+      audioEngine.src = track.url;
+      
+      // Paint UI details
+      trackTitle.textContent = track.title;
+      trackArtist.textContent = track.artist;
+      artBox.textContent = track.emoji;
+      
+      progressBar.value = 0;
+      currentTimeText.textContent = "0:00";
+
+      // Re-renders list entries to update highlighted styling properties
+      renderPlaylist();
+    }
+
+    /**
+     * Toggles execution flows between Audio Streams active states (Play / Pause actions)
+     */
+    function togglePlay() {
+      if (isPlaying) {
+        audioEngine.pause();
+        playButton.textContent = "▶";
+        isPlaying = false;
+      } else {
+        audioEngine.play();
+        playButton.textContent = "⏸";
+        isPlaying = true;
+      }
+    }
+
+    /**
+     * Triggers track skipping execution directions forward or wraps index looping caps back around
+     */
+    function nextTrack() {
+      let nextIndex = currentTrackIndex + 1;
+      if (nextIndex >= tracksList.length) nextIndex = 0;
+      
+      loadTrack(nextIndex);
+      if (isPlaying) audioEngine.play();
+    }
+
+    /**
+     * Triggers fallback movements to preceding track indexes
+     */
+    function prevTrack() {
+      let prevIndex = currentTrackIndex - 1;
+      if (prevIndex < 0) prevIndex = tracksList.length - 1;
+      
+      loadTrack(prevIndex);
+      if (isPlaying) audioEngine.play();
+    }
+
+    /**
+     * Overwrites execution playback time points relative to manual timeline track selections
+     */
+    function seekTrack() {
+      const seekTargetTime = (progressBar.value / 100) * audioEngine.duration;
+      audioEngine.currentTime = seekTargetTime;
+    }
+
+    /**
+     * Formats digital layout outputs converting raw seconds into readable timestamp notations (MM:SS)
+     */
+    function formatTime(seconds) {
+      if (isNaN(seconds)) return "0:00";
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    // ==========================================
+    // 7. EVENT HANDLERS (AUTOMATION HOOKS)
+    // ==========================================
+
+    // TIMEUPDATE: Fires continuously as the music tracks play frame-by-frame forward
+    audioEngine.addEventListener("timeupdate", () => {
+      if (audioEngine.duration) {
+        const progressPercentage = (audioEngine.currentTime / audioEngine.duration) * 100;
+        progressBar.value = progressPercentage;
+        
+        currentTimeText.textContent = formatTime(audioEngine.currentTime);
+        totalDurationText.textContent = formatTime(audioEngine.duration);
+      }
+    });
+
+    // ENDED: Event listener checks for file completion triggers to auto-advance tracks instantly
+    audioEngine.addEventListener("ended", () => {
+      nextTrack();
+    });
+
+    /**
+     * Compiles and renders out track index block lists inside row templates
+     */
+    function renderPlaylist() {
+      playlistContainer.innerHTML = "";
+      
+      tracksList.forEach((track, index) => {
+        const item = document.createElement("div");
+        item.className = `playlist-item ${index === currentTrackIndex ? 'active' : ''}`;
+        item.onclick = () => {
+          loadTrack(index);
+          if (isPlaying) audioEngine.play();
+          else togglePlay();
+        };
+
+        item.innerHTML = `
+          <span>${index + 1}. ${track.title}</span>
+          <span class="duration">${track.emoji}</span>
+        `;
+        playlistContainer.appendChild(item);
+      });
+    }
+
+    // APP STARTER ENTRY POINT INITIALIZER TRIGGER
+    document.addEventListener("DOMContentLoaded", () => {
+      loadTrack(0);
+    });
+  </script>
+
+</body>
+</html>
