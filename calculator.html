@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simple Calculator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet"/>
+  
+  <style>
+    /* ==========================================
+       1. GLOBAL RESET & DESIGN VARIABLES
+       ========================================== */
+    *, *::before, *::after {
+      box-sizing: border-box; /* Prevents padding from breaking width calculations */
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Global design tokens for easy maintenance */
+    :root {
+      --bg: #0a0a0f;             /* App background tint */
+      --calc-bg: #12121a;        /* Calculator body background */
+      --border: #1e1e2e;         /* Thin structural borders */
+      --btn-bg: #1e1e2e;         /* Default numeric button background */
+      --btn-hover: #2a2a3d;     /* Highlight background on hover */
+      --accent: #7c6ef5;        /* Theme color for operators and equals */
+      --accent-hover: #6a5ee0;  /* Deeper shade for active hover states */
+      --text: #e2e2f0;          /* High contrast primary text */
+      --clear: #ef4444;         /* Destructive color for Clear (C) button */
+    }
+
+    /* Centers the entire calculator container perfectly in the center of the screen */
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center; /* Horizontally center */
+      align-items: center;     /* Vertically center */
+      padding: 1rem;
+    }
+
+    /* ==========================================
+       2. CALCULATOR CONTAINER & DISPLAY SCREEN
+       ========================================== */
+    .calculator {
+      width: 100%;
+      max-width: 340px;          /* Restricts calculator width on wide monitors */
+      background: var(--calc-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;       /* Smoothly rounded chassis corners */
+      padding: 1.5rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); /* Deep shadow overlay */
+    }
+
+    .display {
+      width: 100%;
+      height: 70px;
+      background: #0a0a0f;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: monospace;    /* Keeps digit widths uniform to avoid shifts */
+      font-size: 2.2rem;
+      text-align: right;         /* Standard layout alignment for numbers */
+      padding: 0 1.2rem;
+      line-height: 70px;         /* Vertically centers numbers inside the 70px bar */
+      overflow-x: auto;          /* Enables side scrolling if number sequence is massive */
+      white-space: nowrap;       /* Keeps characters packed tight on a single line */
+      margin-bottom: 1.5rem;
+    }
+
+    /* Webkit adjustments for a clean scrolling experience on the display screen */
+    .display::-webkit-scrollbar {
+      height: 4px;
+    }
+    .display::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* ==========================================
+       3. CSS GRID INTERACTION
+       ========================================== */
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr); /* Creates exactly 4 columns of equal fraction width */
+      gap: 0.8rem;                           /* Controls vertical/horizontal gutters between items */
+    }
+
+    .btn {
+      background: var(--btn-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 600;
+      padding: 1.2rem 0;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.2s ease; /* Fluid layout shifting animation on mouse hover */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Adds tactical bounce movement whenever cursor points over keys */
+    .btn:hover {
+      background: var(--btn-hover);
+      transform: translateY(-2px); /* Moves up subtly */
+    }
+
+    /* Returns button down instantly on click execution */
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    /* Unique text styling properties assigned to operational logic signs */
+    .btn.operator {
+      color: var(--accent);
+      font-size: 1.5rem;
+    }
+
+    .btn.clear {
+      color: var(--clear);
+    }
+
+    /* Complex Modifier: Overwrites default sizing rules to span over grid columns vertically */
+    .btn.equal {
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      grid-row: span 2; /* Tells the grid engine to stretch this down 2 units high */
+      height: 100%;
+    }
+
+    .btn.equal:hover {
+      background: var(--accent-hover);
+      box-shadow: 0 4px 15px rgba(124, 110, 245, 0.3); /* Soft accent lighting glow */
+    }
+  </style>
+</head>
+<body>
+
+  <div class="calculator">
+    
+    <div class="display" id="display">0</div>
+    
+    <div class="buttons">
+      
+      <button class="btn clear" onclick="clearDisplay()">C</button>
+      <button class="btn operator" onclick="appendOperator('/')">÷</button>
+      <button class="btn operator" onclick="appendOperator('*')">×</button>
+      <button class="btn operator" onclick="appendOperator('-')">−</button>
+      
+      <button class="btn" onclick="appendNumber('7')">7</button>
+      <button class="btn" onclick="appendNumber('8')">8</button>
+      <button class="btn" onclick="appendNumber('9')">9</button>
+      <button class="btn operator" onclick="appendOperator('+')">+</button>
+      
+      <button class="btn" onclick="appendNumber('4')">4</button>
+      <button class="btn" onclick="appendNumber('5')">5</button>
+      <button class="btn" onclick="appendNumber('6')">6</button>
+      <button class="btn equal" onclick="calculate()">=</button>
+      
+      <button class="btn" onclick="appendNumber('1')">1</button>
+      <button class="btn" onclick="appendNumber('2')">2</button>
+      <button class="btn" onclick="appendNumber('3')">3</button>
+      
+      <button class="btn" style="grid-column: span 3;" onclick="appendNumber('0')">0</button>
+      
+    </div>
+  </div>
+
+  <script>
+    // State Tracker: This holding variable retains current raw user input sequence strings.
+    let currentInput = "0";
+    
+    // DOM Hook: Selects the display element so updates can be written straight into it.
+    const displayElement = document.getElementById("display");
+
+    /**
+     * Updates the inner HTML text content of our interface screen with whatever is inside 'currentInput'.
+     */
+    function updateDisplay() {
+      displayElement.textContent = currentInput;
+    }
+
+    /**
+     * Appends numeric values to the input state string container when clicked.
+     * @param {string} number - The literal numeric input token (e.g. '7').
+     */
+    function appendNumber(number) {
+      // Edge case rule: If screen is currently defaulted to initial string "0", replace it completely
+      if (currentInput === "0") {
+        currentInput = number;
+      } else {
+        // Concatenates next digit right next to previous text characters
+        currentInput += number;
+      }
+      updateDisplay(); // Pushes update onto the UI screen view
+    }
+
+    /**
+     * Appends selected arithmetic operations safely into the track layout.
+     * @param {string} operator - Math execution signature standard values ('+', '-', '*', '/').
+     */
+    function appendOperator(operator) {
+      // Locates the final string slot index position symbol right before next entry additions
+      const lastChar = currentInput.slice(-1);
+      
+      // Validation Check: If the last character entered is already an operator string...
+      if (["+", "-", "*", "/"].includes(lastChar)) {
+        // Strip the existing operator from the tail end, and swap it out with the new choice selection
+        currentInput = currentInput.slice(0, -1) + operator;
+      } else {
+        // Safe string condition found: proceed to append operator symbol cleanly
+        currentInput += operator;
+      }
+      updateDisplay();
+    }
+
+    /**
+     * Resets state back down to clean default starting value.
+     */
+    function clearDisplay() {
+      currentInput = "0";
+      updateDisplay();
+    }
+
+    /**
+     * Evaluates calculations by compiling raw input strings into math execution arrays safely.
+     */
+    function calculate() {
+      try {
+        /*
+          CRITICAL UNDERSTANDING: Using new Function() allows runtime interpretation of code scripts safely.
+          If 'currentInput' evaluates to "7+3*2", it evaluates correctly down mathematically into value 13.
+        */
+        let result = new Function(`return ${currentInput}`)();
+        
+        // Validation Check: Handles fraction logic gracefully if decimal positions stretch out infinitely
+        if (result % 1 !== 0) {
+          result = parseFloat(result.toFixed(4)); // Rounds processing calculations cap cleanly to 4 decimal spots
+        }
+        
+        // Updates internal memory to point towards the calculated output token converted back to string format
+        currentInput = result.toString();
+      } catch (error) {
+        // Catches syntax string exceptions if unclosed parameters are parsed inside calculation loops
+        currentInput = "Error";
+      }
+      updateDisplay();
+    }
+  </script>
+
+</body>
+</html>
